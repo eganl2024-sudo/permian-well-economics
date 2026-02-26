@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.env
+data/raw/
+data/processed/
+data/eia/
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+*.zip
+kaleido_test.png
