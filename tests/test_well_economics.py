@@ -94,16 +94,15 @@ class TestCashFlowStructure:
             f"Total capex {total_capex:,.0f} != expected {expected:,.0f}"
 
     def test_cumulative_cf_is_monotone_after_payback(self):
-        """Once cumulative CF turns positive, it should stay positive."""
+        """Once cumulative CF turns positive, it should stay positive (excluding final abandonment month)."""
         df = CALC._build_cashflows(FORECAST, PRICE_100, MIX, COSTS)
         cum = df['cumulative_cf'].values
         positive_idx = np.where(cum > 0)[0]
         if len(positive_idx) > 0:
             first_positive = positive_idx[0]
-            tail = cum[first_positive:-1]  # Exclude final month (abandonment cost)
-            if len(tail) > 1:
-                assert np.all(np.diff(tail) >= -1.0), \
-                    "Cumulative CF declined after turning positive (excluding abandonment)"
+            tail = cum[first_positive:-1]  # exclude final month (abandonment cost)
+            assert np.all(np.diff(tail) >= -1.0), \
+                "Cumulative CF declined after turning positive (excluding abandonment month)"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
