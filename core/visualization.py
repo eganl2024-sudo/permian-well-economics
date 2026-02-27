@@ -45,6 +45,13 @@ COLORS = {
     'pxd':            '#3498DB',   # Pioneer Natural Resources — blue
     'dvn':            '#2ECC71',   # Devon Energy — green
 
+    'operator': {
+        'fang': '#D4870A',
+        'eog':  '#E74C3C',
+        'pxd':  '#3498DB',
+        'dvn':  '#2ECC71',
+    },
+
     # Chart bands (transparent versions for P10-P90 shading)
     'midland_band':   'rgba(212,135,10,0.15)',
     'delaware_band':  'rgba(52,152,219,0.15)',

@@ -30,6 +30,15 @@ def init_session_state() -> None:
         'well_b_label': 'Well B',
         'well_b_sub_basin': 'Delaware Basin',
 
+        # Additional Well A values for economics
+        'well_a_econ': None,
+        'well_a_price': None,
+        'well_a_costs': None,
+        
+        # Economics UI settings
+        'econ_wti_target': 72.0,
+        'active_well_id': 'well_a',
+
         # Last used settings (persist across page navigation)
         'last_wti': 72.0,
         'last_dc_cost': 7.5,
