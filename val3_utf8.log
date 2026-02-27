@@ -1,8 +1,0 @@
-﻿Γ£à Check 1 (High Price): PV10=$23.0MM | IRR=162%
-Γ¥î Check 2 (Low Price):  PV10=$0.6MM | IRR=12%
-Γ£à Check 3 (Breakeven):  BE=$nan/bbl | IRR at BE=0.0% (target ~0%)
-Γ£à Check 4 (Payback):    Month 10: $-575,992 ΓåÆ $22,142
-Γ£à Check 5 (Sensitivity): Rows monotone=True | Cols monotone=True
-
-Γ¥î FAILURES DETECTED ΓÇö do not proceed to checkpoint
-   Review failed checks above and debug before committing

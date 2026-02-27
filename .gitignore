@@ -14,3 +14,7 @@ Thumbs.db
 .vscode/settings.json
 *.zip
 kaleido_test.png
+
+# Test logs
+*.log
+.pytest_cache/
