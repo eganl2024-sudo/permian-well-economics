@@ -1,7 +1,7 @@
-streamlit
-pandas
-numpy
-scipy
-plotly
+streamlit==1.54.0
+pandas==2.3.3
+numpy==2.4.2
+scipy==1.17.0
+plotly==6.5.2
 kaleido==0.2.1
-xlsxwriter
+xlsxwriter==3.2.9
