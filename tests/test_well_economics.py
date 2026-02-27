@@ -133,9 +133,9 @@ class TestFinancialMetrics:
         assert result.irr > 0.0, f"IRR should be positive, got {result.irr:.2%}"
 
     def test_irr_none_at_very_low_price(self):
+        """At $20 WTI, well should never pay back."""
         result = CALC.run(FORECAST, PRICE_20, MIX, COSTS, build_sensitivity=False)
-        assert result.irr is None, \
-            f"IRR should be None at $20 WTI (well never pays back), got {result.irr}"
+        assert result.irr is None, f"IRR should be None at $20 WTI, got {result.irr}"
 
     def test_irr_in_realistic_permian_range_at_base_price(self):
         """At $72 WTI with a Midland Basin P50 well, IRR should be 10-40%."""
