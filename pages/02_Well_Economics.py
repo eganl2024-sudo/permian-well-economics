@@ -699,6 +699,26 @@ st.session_state['well_a_price'] = price
 st.session_state['well_a_costs'] = costs
 
 st.divider()
+
+# ── Export ────────────────────────────────────────────────────────────────────
+from core.export_utils import download_chart_png, download_economics_excel
+
+st.markdown("### 📥 Export")
+export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
+with export_col1:
+    download_chart_png(
+        fig_heat,
+        filename="pv10_sensitivity.png",
+        button_label="📥 Heatmap (PNG)"
+    )
+with export_col2:
+    download_economics_excel(
+        result,
+        params,
+        well_name=well_label,
+        filename="permian_well_economics.xlsx"
+    )
+
 st.markdown(
     "**Next step:** Compare this well against Permian sub-basins and operators → **Basin Intelligence**"
 )

@@ -548,6 +548,19 @@ with st.expander("View Production History Data"):
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.divider()
+
+# ── Export ────────────────────────────────────────────────────────────────────
+from core.export_utils import download_chart_png
+
+st.markdown("### 📥 Export")
+export_col1, export_col2 = st.columns([1, 3])
+with export_col1:
+    download_chart_png(
+        fig,
+        filename="decline_curve.png",
+        button_label="📥 Download Chart (PNG)"
+    )
+
 st.markdown(
     "**Next step:** Take this forecast to **Well Economics** → "
     "calculate PV10, IRR, and breakeven WTI from the fitted production curve."
