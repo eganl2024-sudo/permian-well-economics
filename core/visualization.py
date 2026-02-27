@@ -33,6 +33,12 @@ COLORS = {
     'delaware':       '#3498DB',   # Blue — Delaware Basin
     'central':        '#95A5A6',   # Gray — Central Platform
 
+    'sub_basin': {
+        'midland': '#D4870A',
+        'delaware': '#3498DB',
+        'central': '#95A5A6'
+    },
+
     # Operator colors
     'fang':           '#D4870A',   # Diamondback Energy — amber
     'eog':            '#E74C3C',   # EOG Resources — red
