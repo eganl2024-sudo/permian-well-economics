@@ -10,7 +10,7 @@ from core.session_state import init_session_state
 # ── Page config — must be the FIRST Streamlit call in any page ───────────────
 st.set_page_config(
     page_title="Permian Well Economics Engine",
-    page_icon="⛽",
+    page_icon="🛢️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -26,7 +26,7 @@ st.markdown(
     f"""
     <div style="margin-bottom: 0.25rem;">
         <span style="font-size: 2.4rem; font-weight: 800; color: {COLORS['accent']};">
-            ⛽ Permian Basin Well Economics Engine
+            🛢️ Permian Basin Well Economics Engine
         </span>
     </div>
     <div style="font-size: 1.05rem; color: {COLORS['text_secondary']}; margin-bottom: 2rem;">
@@ -125,38 +125,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.divider()
-
-# ── Status badges — will update as phases are completed ───────────────────────
-st.markdown(
-    f"<span style='color:{COLORS['text_secondary']}; font-size:0.85rem;'>Build Status</span>",
-    unsafe_allow_html=True
-)
-
-badge_col1, badge_col2, badge_col3, badge_col4, badge_col5 = st.columns(5)
-
-def status_badge(col, label, status):
-    color = COLORS['positive'] if status == 'live' else \
-            COLORS['accent'] if status == 'in_progress' else \
-            COLORS['neutral']
-    icon = '✅' if status == 'live' else '🔄' if status == 'in_progress' else '⏳'
-    col.markdown(
-        f"<div style='text-align:center; padding:0.5rem; background:{COLORS['bg_secondary']}; "
-        f"border-radius:8px; border:1px solid {color}40;'>"
-        f"<div style='font-size:1.1rem;'>{icon}</div>"
-        f"<div style='font-size:0.75rem; color:{color}; font-weight:600;'>{label}</div>"
-        f"</div>",
-        unsafe_allow_html=True
-    )
-
-status_badge(badge_col1, "Landing Page", "live")
-status_badge(badge_col2, "Decline Curves", "pending")
-status_badge(badge_col3, "Well Economics", "pending")
-status_badge(badge_col4, "Basin Intel", "pending")
-status_badge(badge_col5, "Methodology", "pending")
-
 # ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("<br>", unsafe_allow_html=True)
+st.divider()
 st.markdown(
     f"""
     <div style="color:{COLORS['text_secondary']}; font-size:0.8rem;">
