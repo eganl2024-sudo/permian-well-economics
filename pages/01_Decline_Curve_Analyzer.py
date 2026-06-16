@@ -15,7 +15,10 @@ import numpy as np
 import pandas as pd
 from core.visualization import COLORS, CHART_TEMPLATE, METRIC_CARD_CSS
 from core.session_state import init_session_state
-from core.decline_curves import DeclineCurveFitter
+from core.decline_curves import DeclineCurveFitter, ArpsParameters
+from core.decline_curves import (
+    exponential_rate, hyperbolic_rate, harmonic_rate, modified_hyperbolic_rate
+)
 from core.data_loader import SAMPLE_WELLS, generate_sample_well, parse_uploaded_csv
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,19 +126,29 @@ with st.sidebar:
 
 fitter = DeclineCurveFitter(economic_limit=economic_limit)
 
+# The forecast must start at the END of history so the curve connects
+# smoothly. start_month is the time-axis value at the last historical point + 1.
+forecast_start_month = float(well_data.months[-1] + 1)
+
 try:
     params = fitter.fit(
         well_data.months,
         well_data.production_boe_per_day,
         decline_type=decline_type
     )
-    forecast = fitter.forecast(params, months_forward=forecast_years * 12)
+    # Pass start_month so forecast.months begins at forecast_start_month,
+    # not at 0. This is the fix for the uptick artifact.
+    forecast = fitter.forecast(
+        params,
+        months_forward=forecast_years * 12,
+        start_month=forecast_start_month
+    )
 
 except Exception as e:
     st.error(f"Fitting failed: {e}")
     st.stop()
 
-# Also fit all four models for comparison table (always — not just expert mode)
+# Also fit all four models for comparison table
 all_models = {}
 for dt in ["exponential", "hyperbolic", "harmonic", "modified_hyperbolic"]:
     try:
@@ -232,9 +245,6 @@ fig.add_trace(go.Scatter(
 
 # Fitted curve — over the historical period only
 t_hist = well_data.months
-from core.decline_curves import (
-    exponential_rate, hyperbolic_rate, harmonic_rate, modified_hyperbolic_rate
-)
 dispatch = {
     'exponential':         lambda: exponential_rate(t_hist, params.qi, params.Di),
     'hyperbolic':          lambda: hyperbolic_rate(t_hist, params.qi, params.Di, params.b),
@@ -251,28 +261,19 @@ fig.add_trace(go.Scatter(
     line=dict(color=COLORS['accent'], width=2.5, dash='dash')
 ))
 
-# Forecast — continue from end of history
-t_forecast_offset = float(well_data.months[-1] + 1)
-t_forecast_display = forecast.months + t_forecast_offset
-
+# Forecast — forecast.months already starts at forecast_start_month,
+# so no manual offset needed. The +1 aligns with the 1-based x-axis used
+# for historical points above.
 fig.add_trace(go.Scatter(
-    x=t_forecast_display,
+    x=forecast.months + 1,
     y=forecast.daily_rate,
     mode='lines',
     name='Forecast',
     line=dict(color=COLORS['sub_basin']['midland'], width=2.5)
 ))
 
-# EUR confidence interval shading on forecast
-# Build P10 and P90 forecasts for shading
+# EUR confidence interval shading — P10/P90 band
 try:
-    from core.decline_curves import ArpsParameters, DeclineCurveForecast
-    from core.well_economics import CostAssumptions  # not needed here
-
-    params_p10 = DeclineCurveFitter(economic_limit=economic_limit).fit(
-        well_data.months, well_data.production_boe_per_day, decline_type
-    )
-    # Use qi ± 1.645 sigma for P10/P90 band
     qi_std_est = params.qi * 0.10
 
     fc_p10 = fitter.forecast(
@@ -285,7 +286,8 @@ try:
             eur=params.eur_ci_high, eur_ci_low=params.eur_ci_low,
             eur_ci_high=params.eur_ci_high, reserve_life=params.reserve_life
         ),
-        months_forward=forecast_years * 12
+        months_forward=forecast_years * 12,
+        start_month=forecast_start_month
     )
     fc_p90 = fitter.forecast(
         ArpsParameters(
@@ -297,15 +299,15 @@ try:
             eur=params.eur_ci_low, eur_ci_low=params.eur_ci_low,
             eur_ci_high=params.eur_ci_high, reserve_life=params.reserve_life
         ),
-        months_forward=forecast_years * 12
+        months_forward=forecast_years * 12,
+        start_month=forecast_start_month
     )
 
-    # Shaded P90 to P10 band
     fig.add_trace(go.Scatter(
-        x=np.concatenate([t_forecast_display, t_forecast_display[::-1]]),
+        x=np.concatenate([fc_p10.months + 1, fc_p90.months[::-1] + 1]),
         y=np.concatenate([fc_p10.daily_rate, fc_p90.daily_rate[::-1]]),
         fill='toself',
-        fillcolor=f'rgba(212, 135, 10, 0.12)',
+        fillcolor='rgba(212, 135, 10, 0.12)',
         line=dict(color='rgba(0,0,0,0)'),
         name='P10–P90 Range',
         showlegend=True
@@ -374,16 +376,11 @@ with col_eur3:
         </div>""", unsafe_allow_html=True
     )
 
-# EUR waterfall bar chart
 fig_eur = go.Figure(go.Bar(
     x=[params.eur_ci_low, params.eur, params.eur_ci_high],
     y=["P90 (Conservative)", "P50 (Best Estimate)", "P10 (Optimistic)"],
     orientation='h',
-    marker_color=[
-        COLORS['negative'],
-        COLORS['accent'],
-        COLORS['positive']
-    ],
+    marker_color=[COLORS['negative'], COLORS['accent'], COLORS['positive']],
     text=[f"{v:.0f} MBOE" for v in [params.eur_ci_low, params.eur, params.eur_ci_high]],
     textposition='outside',
     textfont=dict(color=COLORS['text_primary'])
@@ -409,14 +406,9 @@ for model_name, p in all_models.items():
     if p is None:
         comparison_data.append({
             "Model": model_name.replace("_", " ").title(),
-            "R²": "—",
-            "RMSE (BOE/d)": "—",
-            "AIC": "—",
-            "qi (BOE/d)": "—",
-            "Di (Annual %)": "—",
-            "b-factor": "—",
-            "EUR P50 (MBOE)": "—",
-            "Selected": ""
+            "R²": "—", "RMSE (BOE/d)": "—", "AIC": "—",
+            "qi (BOE/d)": "—", "Di (Annual %)": "—",
+            "b-factor": "—", "EUR P50 (MBOE)": "—", "Selected": ""
         })
     else:
         comparison_data.append({
@@ -433,7 +425,6 @@ for model_name, p in all_models.items():
 
 comp_df = pd.DataFrame(comparison_data)
 
-# Style: highlight the selected model row
 def highlight_selected(row):
     if row["Selected"] == "✅":
         return [f"background-color: {COLORS['accent']}22"] * len(row)
@@ -501,7 +492,6 @@ if expert_mode:
         "and automatically upgrades to Modified Hyperbolic if b > 1.0."
     )
 
-    # Residual plot
     st.markdown("**Fit Residuals**")
     residuals = well_data.production_boe_per_day - q_fitted
     fig_resid = go.Figure()
@@ -513,10 +503,7 @@ if expert_mode:
         line=dict(color=COLORS['accent'], width=1),
         name='Residuals (Actual - Fitted)'
     ))
-    fig_resid.add_hline(
-        y=0, line_dash="dash",
-        line_color=COLORS['text_secondary']
-    )
+    fig_resid.add_hline(y=0, line_dash="dash", line_color=COLORS['text_secondary'])
     fig_resid.update_layout(
         template=CHART_TEMPLATE,
         height=250,
@@ -544,12 +531,11 @@ with st.expander("View Production History Data"):
     st.caption(f"Source: {well_data.source} | {len(well_data.months)} months")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NAVIGATION PROMPT
+# EXPORT + NAVIGATION
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.divider()
 
-# ── Export ────────────────────────────────────────────────────────────────────
 from core.export_utils import download_chart_png
 
 st.markdown("### 📥 Export")
