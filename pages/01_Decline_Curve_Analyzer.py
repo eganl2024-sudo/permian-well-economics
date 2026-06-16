@@ -21,10 +21,6 @@ from core.decline_curves import (
 )
 from core.data_loader import SAMPLE_WELLS, generate_sample_well, parse_uploaded_csv
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────────────────────────────────────────
-
 st.set_page_config(
     page_title="Decline Curve Analyzer | Permian Well Economics",
     page_icon="🔬",
@@ -63,7 +59,6 @@ with st.sidebar:
             index=0
         )
         well_data = SAMPLE_WELLS[sample_choice]
-
     else:
         uploaded = st.file_uploader(
             "Upload production history CSV",
@@ -125,9 +120,6 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────────────────────
 
 fitter = DeclineCurveFitter(economic_limit=economic_limit)
-
-# The forecast must start at the END of history so the curve connects
-# smoothly. start_month is the time-axis value at the last historical point + 1.
 forecast_start_month = float(well_data.months[-1] + 1)
 
 try:
@@ -136,19 +128,21 @@ try:
         well_data.production_boe_per_day,
         decline_type=decline_type
     )
-    # Pass start_month so forecast.months begins at forecast_start_month,
-    # not at 0. This is the fix for the uptick artifact.
     forecast = fitter.forecast(
         params,
         months_forward=forecast_years * 12,
         start_month=forecast_start_month
     )
-
 except Exception as e:
     st.error(f"Fitting failed: {e}")
     st.stop()
 
-# Also fit all four models for comparison table
+# Save to session state so Page 2 can carry forward the fitted well
+st.session_state['well_a_params'] = params
+st.session_state['well_a_forecast'] = forecast
+st.session_state['well_a_label'] = f"{data_source} — {sample_choice if data_source == 'Sample Well' else 'Uploaded CSV'}"
+
+# Fit all four models for comparison table
 all_models = {}
 for dt in ["exponential", "hyperbolic", "harmonic", "modified_hyperbolic"]:
     try:
@@ -183,7 +177,6 @@ with col1:
             </div>
         </div>""", unsafe_allow_html=True
     )
-
 with col2:
     irr_color = COLORS['positive'] if params.r_squared > 0.90 else COLORS['negative']
     st.markdown(
@@ -194,7 +187,6 @@ with col2:
             </div>
         </div>""", unsafe_allow_html=True
     )
-
 with col3:
     st.markdown(
         f"""<div class="metric-card">
@@ -202,7 +194,6 @@ with col3:
             <div class="metric-value">{params.eur:.0f} <span style="font-size:0.9rem;">MBOE</span></div>
         </div>""", unsafe_allow_html=True
     )
-
 with col4:
     st.markdown(
         f"""<div class="metric-card">
@@ -210,7 +201,6 @@ with col4:
             <div class="metric-value">{params.qi:.0f} <span style="font-size:0.9rem;">BOE/d</span></div>
         </div>""", unsafe_allow_html=True
     )
-
 with col5:
     st.markdown(
         f"""<div class="metric-card">
@@ -229,21 +219,14 @@ st.markdown("### Production History & Forecast")
 
 fig = go.Figure()
 
-# Historical data — scatter points
 fig.add_trace(go.Scatter(
     x=well_data.months + 1,
     y=well_data.production_boe_per_day,
     mode='markers',
     name='Historical Production',
-    marker=dict(
-        color=COLORS['text_primary'],
-        size=6,
-        opacity=0.85,
-        symbol='circle'
-    )
+    marker=dict(color=COLORS['text_primary'], size=6, opacity=0.85, symbol='circle')
 ))
 
-# Fitted curve — over the historical period only
 t_hist = well_data.months
 dispatch = {
     'exponential':         lambda: exponential_rate(t_hist, params.qi, params.Di),
@@ -261,9 +244,6 @@ fig.add_trace(go.Scatter(
     line=dict(color=COLORS['accent'], width=2.5, dash='dash')
 ))
 
-# Forecast — forecast.months already starts at forecast_start_month,
-# so no manual offset needed. The +1 aligns with the 1-based x-axis used
-# for historical points above.
 fig.add_trace(go.Scatter(
     x=forecast.months + 1,
     y=forecast.daily_rate,
@@ -272,71 +252,49 @@ fig.add_trace(go.Scatter(
     line=dict(color=COLORS['sub_basin']['midland'], width=2.5)
 ))
 
-# EUR confidence interval shading — P10/P90 band
 try:
     qi_std_est = params.qi * 0.10
-
     fc_p10 = fitter.forecast(
         ArpsParameters(
-            qi=params.qi + 1.645 * qi_std_est,
-            Di=params.Di, b=params.b,
-            Di_annual=params.Di_annual,
-            decline_type=params.decline_type,
+            qi=params.qi + 1.645 * qi_std_est, Di=params.Di, b=params.b,
+            Di_annual=params.Di_annual, decline_type=params.decline_type,
             r_squared=params.r_squared, rmse=params.rmse, aic=params.aic,
             eur=params.eur_ci_high, eur_ci_low=params.eur_ci_low,
             eur_ci_high=params.eur_ci_high, reserve_life=params.reserve_life
         ),
-        months_forward=forecast_years * 12,
-        start_month=forecast_start_month
+        months_forward=forecast_years * 12, start_month=forecast_start_month
     )
     fc_p90 = fitter.forecast(
         ArpsParameters(
-            qi=max(params.qi - 1.645 * qi_std_est, 1.0),
-            Di=params.Di, b=params.b,
-            Di_annual=params.Di_annual,
-            decline_type=params.decline_type,
+            qi=max(params.qi - 1.645 * qi_std_est, 1.0), Di=params.Di, b=params.b,
+            Di_annual=params.Di_annual, decline_type=params.decline_type,
             r_squared=params.r_squared, rmse=params.rmse, aic=params.aic,
             eur=params.eur_ci_low, eur_ci_low=params.eur_ci_low,
             eur_ci_high=params.eur_ci_high, reserve_life=params.reserve_life
         ),
-        months_forward=forecast_years * 12,
-        start_month=forecast_start_month
+        months_forward=forecast_years * 12, start_month=forecast_start_month
     )
-
     fig.add_trace(go.Scatter(
         x=np.concatenate([fc_p10.months + 1, fc_p90.months[::-1] + 1]),
         y=np.concatenate([fc_p10.daily_rate, fc_p90.daily_rate[::-1]]),
-        fill='toself',
-        fillcolor='rgba(212, 135, 10, 0.12)',
-        line=dict(color='rgba(0,0,0,0)'),
-        name='P10–P90 Range',
-        showlegend=True
+        fill='toself', fillcolor='rgba(212, 135, 10, 0.12)',
+        line=dict(color='rgba(0,0,0,0)'), name='P10–P90 Range', showlegend=True
     ))
 except Exception:
-    pass  # Shading is enhancement — don't crash page if it fails
+    pass
 
-# Vertical line at history/forecast boundary
 fig.add_vline(
-    x=float(well_data.months[-1] + 1),
-    line_dash="dot",
+    x=float(well_data.months[-1] + 1), line_dash="dot",
     line_color=COLORS['text_secondary'],
-    annotation_text="Forecast →",
-    annotation_position="top right",
+    annotation_text="Forecast →", annotation_position="top right",
     annotation_font_color=COLORS['text_secondary']
 )
-
 fig.update_layout(
-    template=CHART_TEMPLATE,
-    height=480,
-    xaxis_title="Month on Production",
-    yaxis_title="BOE/day",
-    legend=dict(
-        orientation="h", yanchor="bottom", y=1.02,
-        xanchor="right", x=1
-    ),
+    template=CHART_TEMPLATE, height=480,
+    xaxis_title="Month on Production", yaxis_title="BOE/day",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     hovermode='x unified'
 )
-
 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -382,15 +340,12 @@ fig_eur = go.Figure(go.Bar(
     orientation='h',
     marker_color=[COLORS['negative'], COLORS['accent'], COLORS['positive']],
     text=[f"{v:.0f} MBOE" for v in [params.eur_ci_low, params.eur, params.eur_ci_high]],
-    textposition='outside',
-    textfont=dict(color=COLORS['text_primary'])
+    textposition='outside', textfont=dict(color=COLORS['text_primary'])
 ))
 fig_eur.update_layout(
-    template=CHART_TEMPLATE,
-    height=200,
+    template=CHART_TEMPLATE, height=200,
     xaxis_title="Estimated Ultimate Recovery (MBOE)",
-    showlegend=False,
-    margin=dict(t=10, b=10)
+    showlegend=False, margin=dict(t=10, b=10)
 )
 st.plotly_chart(fig_eur, use_container_width=True)
 
@@ -432,8 +387,7 @@ def highlight_selected(row):
 
 st.dataframe(
     comp_df.style.apply(highlight_selected, axis=1),
-    use_container_width=True,
-    hide_index=True
+    use_container_width=True, hide_index=True
 )
 
 if not expert_mode:
@@ -496,20 +450,15 @@ if expert_mode:
     residuals = well_data.production_boe_per_day - q_fitted
     fig_resid = go.Figure()
     fig_resid.add_trace(go.Scatter(
-        x=well_data.months + 1,
-        y=residuals,
-        mode='markers+lines',
+        x=well_data.months + 1, y=residuals, mode='markers+lines',
         marker=dict(color=COLORS['accent'], size=5),
         line=dict(color=COLORS['accent'], width=1),
         name='Residuals (Actual - Fitted)'
     ))
     fig_resid.add_hline(y=0, line_dash="dash", line_color=COLORS['text_secondary'])
     fig_resid.update_layout(
-        template=CHART_TEMPLATE,
-        height=250,
-        xaxis_title="Month",
-        yaxis_title="Residual (BOE/day)",
-        margin=dict(t=10)
+        template=CHART_TEMPLATE, height=250,
+        xaxis_title="Month", yaxis_title="Residual (BOE/day)", margin=dict(t=10)
     )
     st.plotly_chart(fig_resid, use_container_width=True)
     st.caption(
@@ -523,12 +472,9 @@ if expert_mode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 with st.expander("View Production History Data"):
-    st.dataframe(
-        well_data.to_dataframe(),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(well_data.to_dataframe(), use_container_width=True, hide_index=True)
     st.caption(f"Source: {well_data.source} | {len(well_data.months)} months")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXPORT + NAVIGATION
@@ -541,11 +487,7 @@ from core.export_utils import download_chart_png
 st.markdown("### 📥 Export")
 export_col1, export_col2 = st.columns([1, 3])
 with export_col1:
-    download_chart_png(
-        fig,
-        filename="decline_curve.png",
-        button_label="📥 Download Chart (PNG)"
-    )
+    download_chart_png(fig, filename="decline_curve.png", button_label="📥 Download Chart (PNG)")
 
 st.markdown(
     "**Next step:** Take this forecast to **Well Economics** → "
