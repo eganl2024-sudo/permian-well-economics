@@ -150,10 +150,10 @@ def status_badge(col, label, status):
     )
 
 status_badge(badge_col1, "Landing Page", "live")
-status_badge(badge_col2, "Decline Curves", "pending")
-status_badge(badge_col3, "Well Economics", "pending")
-status_badge(badge_col4, "Basin Intel", "pending")
-status_badge(badge_col5, "Methodology", "pending")
+status_badge(badge_col2, "Decline Curves", "live")
+status_badge(badge_col3, "Well Economics", "live")
+status_badge(badge_col4, "Basin Intel", "live")
+status_badge(badge_col5, "Methodology", "live")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)

@@ -130,6 +130,8 @@ try:
         decline_type=decline_type
     )
     forecast = fitter.forecast(params, months_forward=forecast_years * 12)
+    st.session_state['well_a_params'] = params
+    st.session_state['well_a_economic_limit'] = economic_limit
 
 except Exception as e:
     st.error(f"Fitting failed: {e}")

@@ -205,25 +205,25 @@ with st.sidebar:
 # BUILD FORECAST FROM SELECTED SOURCE
 # ─────────────────────────────────────────────────────────────────────────────
 
-mix = ProductionMix()
-fitter = DeclineCurveFitter()
-
 if has_fitted_well and "← Fitted Well" in well_source:
     # Carry forward from Page 1 session state
-    params = st.session_state['well_a_params']
+    saved_params = st.session_state['well_a_params']
+    saved_econ_limit = st.session_state.get('well_a_economic_limit', 10.0)
+    fitter = DeclineCurveFitter(economic_limit=saved_econ_limit)
+    params = saved_params
     forecast = fitter.forecast(params, months_forward=forecast_years * 12)
+    mix = ProductionMix()  # No type curve — use defaults
     well_label = "Fitted Well (from Decline Curve Analyzer)"
 else:
-    # Build from type curve
+    # Build from type curve — use tc's GOR and NGL yield for accurate revenue
     tc = get_curve(well_source)
+    fitter = DeclineCurveFitter()
     t = np.arange(0, 36, dtype=float)
     q = hyperbolic_rate(t, tc.qi, tc.Di, tc.b)
     params = fitter.fit(t, q, decline_type='auto')
     forecast = fitter.forecast(params, months_forward=forecast_years * 12)
+    mix = ProductionMix(gor=tc.gor, ngl_yield=tc.ngl_yield)
     well_label = well_source
-
-    # Update costs from type curve defaults (unless user has moved sliders)
-    # Note: We intentionally do NOT override slider values — user controls cost assumptions
 
 
 # ─────────────────────────────────────────────────────────────────────────────
