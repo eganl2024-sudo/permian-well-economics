@@ -77,20 +77,18 @@ with st.sidebar:
     with preset_col3:
         bull_btn = st.button("🐂 Bull\n$90", use_container_width=True)
 
-    # Preset button logic — sets session state WTI target
+    # Preset buttons write directly to the slider's key so they actually move it
     if bear_btn:
-        st.session_state['econ_wti_target'] = 55.0
+        st.session_state['econ_wti'] = 55.0
     if base_btn:
-        st.session_state['econ_wti_target'] = 72.0
+        st.session_state['econ_wti'] = 72.0
     if bull_btn:
-        st.session_state['econ_wti_target'] = 90.0
-
-    default_wti = float(st.session_state.get('econ_wti_target', 72.0))
+        st.session_state['econ_wti'] = 90.0
 
     wti_price = st.slider(
         "WTI Price ($/bbl)",
         min_value=30.0, max_value=130.0,
-        value=default_wti, step=1.0,
+        value=72.0, step=1.0,
         key="econ_wti"
     )
     gas_price = st.slider(
@@ -340,6 +338,40 @@ with col6:
     )
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# Economic verdict signal
+_irr_ok  = result.irr is not None and result.irr >= target_irr
+_pv10_ok = result.pv10 > 0
+if _irr_ok and _pv10_ok:
+    _verdict, _verdict_color, _verdict_note = (
+        "✅ ECONOMIC",
+        COLORS['positive'],
+        f"IRR {fmt_pct(result.irr)} exceeds {fmt_pct(target_irr)} hurdle | PV{discount_rate*100:.0f} positive"
+    )
+elif _pv10_ok:
+    _verdict, _verdict_color, _verdict_note = (
+        "⚠️ MARGINAL",
+        COLORS['accent'],
+        f"PV{discount_rate*100:.0f} positive but IRR {fmt_pct(result.irr)} below {fmt_pct(target_irr)} hurdle"
+    )
+else:
+    _verdict, _verdict_color, _verdict_note = (
+        "❌ UNECONOMIC",
+        COLORS['negative'],
+        f"PV{discount_rate*100:.0f} negative at WTI ${wti_price:.0f}/bbl | Breakeven ${result.breakeven_wti_zero_irr:.0f}/bbl"
+        if not np.isnan(result.breakeven_wti_zero_irr) else
+        f"PV{discount_rate*100:.0f} negative — no positive breakeven found"
+    )
+
+st.markdown(
+    f"<div style='padding:0.6rem 1rem; border-radius:8px; "
+    f"border:1px solid {_verdict_color}55; background:{_verdict_color}11; "
+    f"display:inline-block; margin-bottom:1rem;'>"
+    f"<span style='font-weight:700; color:{_verdict_color}; font-size:1.05rem;'>{_verdict}</span>"
+    f"<span style='color:{COLORS['text_secondary']}; font-size:0.88rem; margin-left:1rem;'>{_verdict_note}</span>"
+    f"</div>",
+    unsafe_allow_html=True
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
