@@ -10,7 +10,7 @@ from core.session_state import init_session_state
 # ── Page config — must be the FIRST Streamlit call in any page ───────────────
 st.set_page_config(
     page_title="Permian Well Economics Engine",
-    page_icon="⛽",
+    page_icon="🛢️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -26,7 +26,7 @@ st.markdown(
     f"""
     <div style="margin-bottom: 0.25rem;">
         <span style="font-size: 2.4rem; font-weight: 800; color: {COLORS['accent']};">
-            ⛽ Permian Basin Well Economics Engine
+            🛢️ Permian Basin Well Economics Engine
         </span>
     </div>
     <div style="font-size: 1.05rem; color: {COLORS['text_secondary']}; margin-bottom: 2rem;">
@@ -156,7 +156,7 @@ status_badge(badge_col4, "Basin Intel", "live")
 status_badge(badge_col5, "Methodology", "live")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("<br>", unsafe_allow_html=True)
+st.divider()
 st.markdown(
     f"""
     <div style="color:{COLORS['text_secondary']}; font-size:0.8rem;">

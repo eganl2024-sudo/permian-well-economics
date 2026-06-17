@@ -23,10 +23,6 @@ from core.type_curves import (
     SUB_BASIN_CURVES, OPERATOR_CURVES, ALL_CURVES, TypeCurve
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────────────────────────────────────────
-
 st.set_page_config(
     page_title="Basin Intelligence | Permian Well Economics",
     page_icon="🗺️",
@@ -34,10 +30,6 @@ st.set_page_config(
 )
 init_session_state()
 st.markdown(METRIC_CARD_CSS, unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# COLOR MAP — one color per curve, consistent across all charts
-# ─────────────────────────────────────────────────────────────────────────────
 
 CURVE_COLORS = {
     "Midland Basin P50":             COLORS['sub_basin']['midland'],
@@ -83,31 +75,24 @@ with st.sidebar:
     st.divider()
     st.markdown("**Price Deck for Economics**")
     wti_price = st.slider(
-        "WTI ($/bbl)",
-        min_value=40.0, max_value=110.0,
-        value=72.0, step=1.0,
-        key="basin_wti"
+        "WTI ($/bbl)", min_value=40.0, max_value=110.0,
+        value=72.0, step=1.0, key="basin_wti"
     )
     dc_override = st.toggle(
-        "Use type curve D&C defaults",
-        value=True,
+        "Use type curve D&C defaults", value=True,
         help="When ON, each curve uses its own representative D&C cost. "
              "When OFF, apply a single D&C cost across all curves for apples-to-apples comparison."
     )
     if not dc_override:
         dc_uniform = st.slider(
-            "Uniform D&C Cost ($MM)",
-            min_value=5.0, max_value=12.0,
-            value=7.5, step=0.5,
-            key="basin_dc_uniform"
+            "Uniform D&C Cost ($MM)", min_value=5.0, max_value=12.0,
+            value=7.5, step=0.5, key="basin_dc_uniform"
         )
 
     st.divider()
     forecast_years = st.slider(
-        "Production Forecast (years)",
-        min_value=10, max_value=30,
-        value=20, step=5,
-        key="basin_forecast_yrs"
+        "Production Forecast (years)", min_value=10, max_value=30,
+        value=20, step=5, key="basin_forecast_yrs"
     )
 
 
@@ -120,7 +105,7 @@ mix     = ProductionMix()
 fitter  = DeclineCurveFitter()
 calc    = WellEconomicsCalculator()
 
-results = {}   # name → dict with params, forecast, econ, tc, costs
+results = {}
 
 for name, tc in active_curves.items():
     t = np.arange(0, 36, dtype=float)
@@ -130,28 +115,19 @@ for name, tc in active_curves.items():
 
     dc = tc.dc_cost if dc_override else dc_uniform
     costs = CostAssumptions(
-        dc_cost=dc,
-        lateral_length=tc.lateral_length,
-        loe_per_boe=10.0,
-        gathering_transport=3.50,
-        nri=tc.nri
+        dc_cost=dc, lateral_length=tc.lateral_length,
+        loe_per_boe=10.0, gathering_transport=3.50, nri=tc.nri
     )
 
     try:
-        econ = calc.run(
-            forecast, price, mix, costs,
-            build_sensitivity=False
-        )
+        econ = calc.run(forecast, price, mix, costs, build_sensitivity=False)
     except Exception:
         econ = None
 
     results[name] = {
-        "tc":       tc,
-        "params":   params,
-        "forecast": forecast,
-        "econ":     econ,
-        "costs":    costs,
-        "color":    CURVE_COLORS.get(name, COLORS['text_secondary'])
+        "tc": tc, "params": params, "forecast": forecast,
+        "econ": econ, "costs": costs,
+        "color": CURVE_COLORS.get(name, COLORS['text_secondary'])
     }
 
 
@@ -161,7 +137,8 @@ for name, tc in active_curves.items():
 
 st.markdown("## 🗺️ Basin Intelligence")
 st.caption(
-    f"Comparing **{len(active_curves)}** {'sub-basins' if view_mode == 'Sub-Basins' else 'operators' if view_mode == 'Operators' else 'curves'} "
+    f"Comparing **{len(active_curves)}** "
+    f"{'sub-basins' if view_mode == 'Sub-Basins' else 'operators' if view_mode == 'Operators' else 'curves'} "
     f"| WTI ${wti_price:.0f}/bbl | {forecast_years}-year forecast horizon"
 )
 
@@ -178,24 +155,15 @@ with tab_rate:
     fig_rate = go.Figure()
     for name, r in results.items():
         fig_rate.add_trace(go.Scatter(
-            x=r['forecast'].months,
-            y=r['forecast'].daily_rate,
-            mode='lines',
-            name=name,
+            x=r['forecast'].months, y=r['forecast'].daily_rate,
+            mode='lines', name=name,
             line=dict(color=r['color'], width=2.5),
             hovertemplate=f"<b>{name}</b><br>Month %{{x:.0f}}<br>%{{y:.0f}} BOE/day<extra></extra>"
         ))
-
     fig_rate.update_layout(
-        template=CHART_TEMPLATE,
-        height=400,
-        xaxis_title="Month on Production",
-        yaxis_title="BOE/day",
-        legend=dict(
-            orientation="v",
-            x=1.01, y=1,
-            xanchor="left"
-        ),
+        template=CHART_TEMPLATE, height=400,
+        xaxis_title="Month on Production", yaxis_title="BOE/day",
+        legend=dict(orientation="v", x=1.01, y=1, xanchor="left"),
         hovermode='x unified'
     )
     st.plotly_chart(fig_rate, use_container_width=True)
@@ -204,31 +172,20 @@ with tab_cumulative:
     fig_cum = go.Figure()
     for name, r in results.items():
         fig_cum.add_trace(go.Scatter(
-            x=r['forecast'].months,
-            y=r['forecast'].cumulative,
-            mode='lines',
-            name=name,
+            x=r['forecast'].months, y=r['forecast'].cumulative,
+            mode='lines', name=name,
             line=dict(color=r['color'], width=2.5),
             hovertemplate=f"<b>{name}</b><br>Month %{{x:.0f}}<br>%{{y:.0f}} MBOE<extra></extra>"
         ))
-
-    # EUR annotations at end of each curve
-    for name, r in results.items():
         final_cum = r['forecast'].cumulative[-1]
         fig_cum.add_annotation(
-            x=r['forecast'].months[-1],
-            y=final_cum,
-            text=f"  {final_cum:.0f}",
-            showarrow=False,
-            xanchor='left',
+            x=r['forecast'].months[-1], y=final_cum,
+            text=f"  {final_cum:.0f}", showarrow=False, xanchor='left',
             font=dict(color=r['color'], size=10)
         )
-
     fig_cum.update_layout(
-        template=CHART_TEMPLATE,
-        height=400,
-        xaxis_title="Month on Production",
-        yaxis_title="Cumulative Production (MBOE)",
+        template=CHART_TEMPLATE, height=400,
+        xaxis_title="Month on Production", yaxis_title="Cumulative Production (MBOE)",
         legend=dict(orientation="v", x=1.01, y=1, xanchor="left"),
         hovermode='x unified'
     )
@@ -255,22 +212,21 @@ for name, r in results.items():
     payback  = econ.payback_months if econ else None
 
     rows.append({
-        "Curve":                name,
-        "Basin":                tc.basin,
-        "qi (BOE/d)":           f"{tc.qi:,.0f}",
-        "EUR P50 (MBOE)":       f"{p.eur:.0f}",
-        "D&C Cost ($MM)":       f"${r['costs'].dc_cost:.1f}",
-        "F&D ($/BOE)":          f"${fd:.1f}" if not np.isnan(fd) else "N/A",
-        f"PV{10} ($MM)":        f"${pv10_mm:.1f}" if not np.isnan(pv10_mm) else "N/A",
-        "IRR":                  f"{irr_pct:.0f}%" if irr_pct is not None else "N/A",
-        "Breakeven WTI":        f"${be_wti:.0f}" if not np.isnan(be_wti) else "N/A",
-        "Payback":              f"{int(payback)}mo" if payback else "N/A",
-        "NPV/Lateral Ft":       f"${npv_ft:.0f}" if not np.isnan(npv_ft) else "N/A",
+        "Curve":            name,
+        "Basin":            tc.basin,
+        "qi (BOE/d)":       f"{tc.qi:,.0f}",
+        "EUR P50 (MBOE)":   f"{p.eur:.0f}",
+        "D&C Cost ($MM)":   f"${r['costs'].dc_cost:.1f}",
+        "F&D ($/BOE)":      f"${fd:.1f}" if not np.isnan(fd) else "N/A",
+        "PV10 ($MM)":       f"${pv10_mm:.1f}" if not np.isnan(pv10_mm) else "N/A",
+        "IRR":              f"{irr_pct:.0f}%" if irr_pct is not None else "N/A",
+        "Breakeven WTI":    f"${be_wti:.0f}" if not np.isnan(be_wti) else "N/A",
+        "Payback":          f"{int(payback)}mo" if payback else "N/A",
+        "NPV/Lateral Ft":   f"${npv_ft:.0f}" if not np.isnan(npv_ft) else "N/A",
     })
 
 comp_df = pd.DataFrame(rows)
 
-# Color rows by basin
 def color_by_basin(row):
     basin_colors = {
         'Midland':  f"background-color: {COLORS['sub_basin']['midland']}18",
@@ -282,8 +238,7 @@ def color_by_basin(row):
 
 st.dataframe(
     comp_df.style.apply(color_by_basin, axis=1),
-    use_container_width=True,
-    hide_index=True
+    use_container_width=True, hide_index=True
 )
 
 
@@ -294,77 +249,47 @@ st.dataframe(
 st.markdown("### Economics at a Glance")
 
 bar_col1, bar_col2 = st.columns(2)
+curve_names = list(results.keys())
 
-curve_names  = list(results.keys())
-bar_colors   = [r['color'] for r in results.values()]
-
-pv10_vals = [
-    (r['econ'].pv10 / 1e6 if r['econ'] else 0)
-    for r in results.values()
-]
-irr_vals = [
-    ((r['econ'].irr * 100) if (r['econ'] and r['econ'].irr) else 0)
-    for r in results.values()
-]
+pv10_vals = [(r['econ'].pv10 / 1e6 if r['econ'] else 0) for r in results.values()]
+irr_vals  = [((r['econ'].irr * 100) if (r['econ'] and r['econ'].irr) else 0) for r in results.values()]
 
 with bar_col1:
     fig_pv10 = go.Figure(go.Bar(
-        x=curve_names,
-        y=pv10_vals,
-        marker_color=[
-            COLORS['positive'] if v >= 0 else COLORS['negative']
-            for v in pv10_vals
-        ],
-        text=[f"${v:.1f}MM" for v in pv10_vals],
-        textposition='outside',
+        x=curve_names, y=pv10_vals,
+        marker_color=[COLORS['positive'] if v >= 0 else COLORS['negative'] for v in pv10_vals],
+        text=[f"${v:.1f}MM" for v in pv10_vals], textposition='outside',
         textfont=dict(color=COLORS['text_primary'], size=11),
         hovertemplate="%{x}<br>PV10: $%{y:.1f}MM<extra></extra>"
     ))
     fig_pv10.add_hline(y=0, line_dash="dash", line_color=COLORS['text_secondary'])
     fig_pv10.update_layout(
-        template=CHART_TEMPLATE,
-        height=340,
+        template=CHART_TEMPLATE, height=340,
         title=dict(text=f"PV10 ($MM) at ${wti_price:.0f} WTI", font=dict(size=13)),
-        xaxis_tickangle=-30,
-        yaxis_title="PV10 ($MM)",
-        showlegend=False,
-        margin=dict(t=50)
+        xaxis_tickangle=-30, yaxis_title="PV10 ($MM)", showlegend=False, margin=dict(t=50)
     )
     st.plotly_chart(fig_pv10, use_container_width=True)
 
 with bar_col2:
     fig_irr = go.Figure(go.Bar(
-        x=curve_names,
-        y=irr_vals,
+        x=curve_names, y=irr_vals,
         marker_color=[
-            COLORS['positive'] if v >= 15 else
-            COLORS['accent']   if v > 0   else
-            COLORS['negative']
+            COLORS['positive'] if v >= 15 else COLORS['accent'] if v > 0 else COLORS['negative']
             for v in irr_vals
         ],
-        text=[f"{v:.0f}%" if v > 0 else "N/A" for v in irr_vals],
-        textposition='outside',
+        text=[f"{v:.0f}%" if v > 0 else "N/A" for v in irr_vals], textposition='outside',
         textfont=dict(color=COLORS['text_primary'], size=11),
         hovertemplate="%{x}<br>IRR: %{y:.0f}%<extra></extra>"
     ))
-    # Typical operator hurdle rate line
     fig_irr.add_hline(
-        y=15,
-        line_dash="dash",
-        line_color=COLORS['accent'],
-        annotation_text="15% hurdle rate",
-        annotation_position="top right",
-        annotation_font_color=COLORS['accent'],
-        annotation_font_size=10
+        y=15, line_dash="dash", line_color=COLORS['accent'],
+        annotation_text="15% hurdle rate", annotation_position="top right",
+        annotation_font_color=COLORS['accent'], annotation_font_size=10
     )
     fig_irr.update_layout(
-        template=CHART_TEMPLATE,
-        height=340,
+        template=CHART_TEMPLATE, height=340,
         title=dict(text=f"IRR at ${wti_price:.0f} WTI", font=dict(size=13)),
-        xaxis_tickangle=-30,
-        yaxis_title="IRR (%)",
-        showlegend=False,
-        margin=dict(t=50)
+        xaxis_tickangle=-30, yaxis_title="IRR (%)", showlegend=False, margin=dict(t=50)
     )
     st.plotly_chart(fig_irr, use_container_width=True)
 
@@ -375,11 +300,7 @@ with bar_col2:
 
 st.markdown("### Multi-Dimension Operator Scorecard")
 
-# Radar scores each curve across 5 normalized dimensions.
-# Score 0-10 for each dimension, normalized within the active set.
-
 def normalize(vals: list, higher_is_better: bool = True) -> list:
-    """Normalize a list to 0-10 scale within the set."""
     arr = np.array(vals, dtype=float)
     arr = np.nan_to_num(arr, nan=0.0)
     lo, hi = arr.min(), arr.max()
@@ -390,24 +311,17 @@ def normalize(vals: list, higher_is_better: bool = True) -> list:
 
 dimensions = ["Initial Rate", "EUR", "Capital Efficiency<br>(F&D Cost)", "Returns<br>(IRR)", "Margin<br>(Breakeven)"]
 
-dim_qi  = normalize([r['tc'].qi for r in results.values()],  higher_is_better=True)
+dim_qi  = normalize([r['tc'].qi for r in results.values()], higher_is_better=True)
 dim_eur = normalize([r['params'].eur for r in results.values()], higher_is_better=True)
-dim_fd  = normalize(
-    [r['econ'].fd_cost if r['econ'] else 0 for r in results.values()],
-    higher_is_better=False   # lower F&D = better
-)
-dim_irr = normalize(
-    [(r['econ'].irr or 0) * 100 if r['econ'] else 0 for r in results.values()],
-    higher_is_better=True
-)
+dim_fd  = normalize([r['econ'].fd_cost if r['econ'] else 0 for r in results.values()], higher_is_better=False)
+dim_irr = normalize([(r['econ'].irr or 0) * 100 if r['econ'] else 0 for r in results.values()], higher_is_better=True)
 dim_be  = normalize(
     [r['econ'].breakeven_wti_zero_irr if (r['econ'] and not np.isnan(r['econ'].breakeven_wti_zero_irr)) else 999
      for r in results.values()],
-    higher_is_better=False   # lower breakeven = better
+    higher_is_better=False
 )
 
 fig_radar = go.Figure()
-names_list = list(results.keys())
 
 def hex_to_rgba(hex_color, alpha=0.13):
     hex_color = str(hex_color).lstrip('#')
@@ -418,46 +332,28 @@ def hex_to_rgba(hex_color, alpha=0.13):
         return f"rgba(0,0,0,{alpha})"
 
 for i, (name, r) in enumerate(results.items()):
-    scores = [
-        dim_qi[i], dim_eur[i], dim_fd[i],
-        dim_irr[i], dim_be[i]
-    ]
-    scores_closed = scores + [scores[0]]  # Close the polygon
+    scores = [dim_qi[i], dim_eur[i], dim_fd[i], dim_irr[i], dim_be[i]]
+    scores_closed = scores + [scores[0]]
     dims_closed   = dimensions + [dimensions[0]]
-
     fig_radar.add_trace(go.Scatterpolar(
-        r=scores_closed,
-        theta=dims_closed,
-        fill='toself',
+        r=scores_closed, theta=dims_closed, fill='toself',
         fillcolor=hex_to_rgba(r['color'], 0.13),
-        line=dict(color=r['color'], width=2),
-        name=name
+        line=dict(color=r['color'], width=2), name=name
     ))
 
 fig_radar.update_layout(
     template=CHART_TEMPLATE,
     polar=dict(
         bgcolor=COLORS['bg_secondary'],
-        radialaxis=dict(
-            visible=True,
-            range=[0, 10],
-            tickfont=dict(color=COLORS['text_secondary'], size=9),
-            gridcolor='rgba(255,255,255,0.1)'
-        ),
-        angularaxis=dict(
-            tickfont=dict(color=COLORS['text_primary'], size=11),
-            gridcolor='rgba(255,255,255,0.1)'
-        )
+        radialaxis=dict(visible=True, range=[0, 10],
+                        tickfont=dict(color=COLORS['text_secondary'], size=9),
+                        gridcolor='rgba(255,255,255,0.1)'),
+        angularaxis=dict(tickfont=dict(color=COLORS['text_primary'], size=11),
+                         gridcolor='rgba(255,255,255,0.1)')
     ),
-    height=480,
-    showlegend=True,
-    legend=dict(
-        orientation="h",
-        yanchor="bottom", y=-0.15,
-        xanchor="center", x=0.5
-    )
+    height=480, showlegend=True,
+    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
 )
-
 st.plotly_chart(fig_radar, use_container_width=True)
 
 if not expert_mode:
@@ -501,13 +397,8 @@ if expert_mode:
             "D&C ($MM)":        f"${tc.dc_cost:.1f}",
         })
 
-    st.dataframe(
-        pd.DataFrame(param_rows),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(pd.DataFrame(param_rows), use_container_width=True, hide_index=True)
 
-    # Curve description cards
     st.markdown("### Curve Descriptions & Data Sources")
     for name, r in results.items():
         with st.expander(f"📋 {name}"):
@@ -519,6 +410,4 @@ if expert_mode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.divider()
-st.markdown(
-    "**Next:** Read the full analytical methodology → **Methodology**"
-)
+st.markdown("**Next:** Read the full analytical methodology → **Methodology**")
